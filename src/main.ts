@@ -482,9 +482,20 @@ export class MeetergoIntegration {
                 return;
               }
 
+              // Safely merge params, ensuring all values are strings
+              const safeParams: Record<string, string> = {};
+              if (data.params && typeof data.params === "object") {
+                Object.entries(data.params).forEach(([key, value]) => {
+                  // Convert all values to strings to prevent type errors
+                  if (value !== null && value !== undefined) {
+                    safeParams[key] = String(value);
+                  }
+                });
+              }
+
               this.openModalWithContent({
                 link: data.link,
-                existingParams: { ...data.params, ...iframeParams },
+                existingParams: { ...safeParams, ...iframeParams },
               });
               break;
             }
@@ -529,7 +540,8 @@ export class MeetergoIntegration {
 
     if (divIframe) {
       const linkAttr = divIframe.getAttribute("link");
-      if (linkAttr) {
+      // Validate that linkAttr is a non-empty string before processing
+      if (linkAttr && typeof linkAttr === "string" && linkAttr.trim() !== "") {
         const queryString = linkAttr.split("?")[1];
         if (queryString) {
           const urlParams = new URLSearchParams(queryString);
