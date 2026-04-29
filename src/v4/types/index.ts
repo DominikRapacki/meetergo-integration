@@ -267,6 +267,15 @@ export interface WhatsappButtonConfig {
   /** Optional URL the consent label links to (privacy policy / imprint). */
   gdprPolicyUrl?: string;
   /**
+   * Gating behaviour for the GDPR notice:
+   *   - "checkbox" (default): renders a checkbox; CTA / chips stay
+   *     disabled until the visitor ticks it.
+   *   - "notice": passive text only, no checkbox, no gating. Picks
+   *     the "by clicking you agree" pattern, which some legal regimes
+   *     prefer over a forced opt-in.
+   */
+  gdprMode?: "checkbox" | "notice";
+  /**
    * Visitor-side input mode:
    *   - "free-text" (default): pre-filled draft + a single "Start chat"
    *     CTA. The visitor can edit the draft inside WhatsApp before sending.

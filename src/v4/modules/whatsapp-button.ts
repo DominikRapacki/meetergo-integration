@@ -214,28 +214,37 @@ export class WhatsappButton {
     const cta = document.createElement("div");
     cta.className = "mg-wa-popup-cta";
 
-    // GDPR consent (optional). When `gdprNotice` is set we render a
-    // checkbox + label and gate every send action behind it — Meta's
-    // click-to-chat doesn't itself store anything, but the message is
-    // sent on the visitor's behalf via an outbound URL, which most EU
-    // privacy regimes treat as data sharing. Locking sends until
-    // consent is the pragmatic, low-friction way to comply.
+    // GDPR consent (optional). Two modes:
+    //   - "checkbox" (default): renders a checkbox; sends are blocked
+    //     until the visitor ticks it. Belt-and-braces opt-in.
+    //   - "notice": renders the text only, no checkbox, no gating.
+    //     Picks the "by clicking you agree" pattern, which is often a
+    //     cleaner legal posture (no false sense of soft consent).
+    // Either way the text is rendered with `textContent` so a hostile
+    // customer-supplied string can't inject markup into the host page.
     const gdprNotice = cfg.gdprNotice?.trim();
+    const gdprMode = cfg.gdprMode ?? "checkbox";
     let consentBox: HTMLInputElement | null = null;
     if (gdprNotice) {
       const wrapper = document.createElement("label");
       wrapper.className = "mg-wa-gdpr";
-      const cb = document.createElement("input");
-      cb.type = "checkbox";
-      cb.className = "mg-wa-gdpr-cb";
-      consentBox = cb;
+      // Notice mode keeps the same layout sans checkbox — adding a
+      // class lets the stylesheet collapse the gap and shrink the
+      // padding so a notice-only block doesn't look as heavy.
+      if (gdprMode === "notice") wrapper.classList.add("mg-wa-gdpr-notice");
+
+      if (gdprMode === "checkbox") {
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.className = "mg-wa-gdpr-cb";
+        consentBox = cb;
+        wrapper.appendChild(cb);
+      }
+
       const text = document.createElement("span");
-      // Strip any HTML so a malicious notice can't inject script tags
-      // into a customer site. The optional policy link is rendered as a
-      // separate anchor we control fully.
       text.textContent = gdprNotice;
-      wrapper.appendChild(cb);
       wrapper.appendChild(text);
+
       if (cfg.gdprPolicyUrl) {
         wrapper.appendChild(document.createTextNode(" "));
         const a = document.createElement("a");
@@ -561,6 +570,13 @@ function wgStyles(_color: string): string {
       margin-bottom: 10px;
       line-height: 1.4;
       cursor: pointer;
+    }
+    /* Notice-only variant: no checkbox to align with, so we drop the
+       gap and the cursor since the whole block is non-interactive
+       (apart from the optional policy link). */
+    .mg-wa-gdpr.mg-wa-gdpr-notice {
+      gap: 0;
+      cursor: default;
     }
     .mg-wa-gdpr-cb {
       margin: 2px 0 0 0;
