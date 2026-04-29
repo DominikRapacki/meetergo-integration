@@ -266,6 +266,21 @@ export interface WhatsappButtonConfig {
   gdprNotice?: string;
   /** Optional URL the consent label links to (privacy policy / imprint). */
   gdprPolicyUrl?: string;
+  /**
+   * Visitor-side input mode:
+   *   - "free-text" (default): pre-filled draft + a single "Start chat"
+   *     CTA. The visitor can edit the draft inside WhatsApp before sending.
+   *   - "quick-replies": vertical stack of tappable chips, one per
+   *     pre-defined intent. No free-text input on the widget. Tapping a
+   *     chip opens wa.me with that chip's message.
+   */
+  inputMode?: "free-text" | "quick-replies";
+  /**
+   * Pre-defined options shown when `inputMode === "quick-replies"`. Each
+   * chip carries its own pre-filled message. Empty list falls back to
+   * free-text behaviour.
+   */
+  quickReplies?: Array<{ label: string; message: string }>;
   /** Stable DOM id for the FAB element. */
   domId?: string;
 }

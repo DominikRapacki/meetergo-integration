@@ -205,20 +205,18 @@ export class WhatsappButton {
     body.appendChild(bubble);
     popup.appendChild(body);
 
-    // CTA
+    // CTA region — branches on input mode. Quick-replies skips the
+    // single-CTA path entirely and renders a stack of chips, each
+    // carrying its own pre-filled message.
     const cta = document.createElement("div");
     cta.className = "mg-wa-popup-cta";
-    const draft = document.createElement("div");
-    draft.className = "mg-wa-draft";
-    draft.textContent = cfg.prefilledMessage ?? DEFAULT_PREFILLED;
-    cta.appendChild(draft);
 
     // GDPR consent (optional). When `gdprNotice` is set we render a
-    // checkbox + label and gate the CTA behind it — Meta's click-to-chat
-    // doesn't itself store anything, but the message is sent on the
-    // visitor's behalf via an outbound URL, which most EU privacy regimes
-    // treat as data sharing. Locking the CTA until consent is the
-    // pragmatic, low-friction way to comply.
+    // checkbox + label and gate every send action behind it — Meta's
+    // click-to-chat doesn't itself store anything, but the message is
+    // sent on the visitor's behalf via an outbound URL, which most EU
+    // privacy regimes treat as data sharing. Locking sends until
+    // consent is the pragmatic, low-friction way to comply.
     const gdprNotice = cfg.gdprNotice?.trim();
     let consentBox: HTMLInputElement | null = null;
     if (gdprNotice) {
@@ -248,29 +246,78 @@ export class WhatsappButton {
       cta.appendChild(wrapper);
     }
 
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "mg-wa-cta-btn";
-    button.style.backgroundColor = cfg.primaryColor ?? DEFAULT_COLOR;
-    button.innerHTML = `${whatsappIconSvg(16)}<span>${escapeHtml(cfg.ctaLabel ?? DEFAULT_CTA)}</span>`;
-    if (consentBox) {
-      // Initially disabled; the CTA opacity/cursor is handled in CSS via
-      // `:disabled`. Toggle on every checkbox change so the button
-      // unlocks the moment consent is given.
-      button.disabled = true;
-      consentBox.addEventListener("change", () => {
-        button.disabled = !consentBox!.checked;
+    const isConsentBlocked = () => Boolean(consentBox && !consentBox.checked);
+
+    const usingQuickReplies =
+      cfg.inputMode === "quick-replies" && (cfg.quickReplies?.length ?? 0) > 0;
+
+    if (usingQuickReplies) {
+      // Quick-replies mode: render one chip per option. Each chip is a
+      // self-contained "tap to send" — no draft text shown above
+      // because the chip's label IS the choice. The order in `quickReplies`
+      // is preserved so customers can ladder the options by intent
+      // (e.g. most-common first).
+      const list = document.createElement("div");
+      list.className = "mg-wa-quick-list";
+      const chipColor = cfg.primaryColor ?? DEFAULT_COLOR;
+      const chipButtons: HTMLButtonElement[] = [];
+      for (const reply of cfg.quickReplies ?? []) {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "mg-wa-quick-chip";
+        chip.style.borderColor = chipColor;
+        chip.style.color = chipColor;
+        chip.textContent = reply.label;
+        chip.addEventListener("click", () => {
+          if (isConsentBlocked()) return;
+          const url = buildWaMeUrl(cfg.phoneNumber!, reply.message ?? "");
+          window.open(url, "_blank", "noopener,noreferrer");
+        });
+        list.appendChild(chip);
+        chipButtons.push(chip);
+      }
+      // Lock chips behind consent in the same way the single CTA is.
+      if (consentBox) {
+        for (const c of chipButtons) c.disabled = true;
+        consentBox.addEventListener("change", () => {
+          const blocked = !consentBox!.checked;
+          for (const c of chipButtons) c.disabled = blocked;
+        });
+      }
+      cta.appendChild(list);
+    } else {
+      // Free-text mode (default). Show the draft preview + single CTA.
+      const draft = document.createElement("div");
+      draft.className = "mg-wa-draft";
+      draft.textContent = cfg.prefilledMessage ?? DEFAULT_PREFILLED;
+      // Insert draft BEFORE the consent label if it was already
+      // appended above — keeps reading order: draft → consent → CTA.
+      cta.insertBefore(draft, cta.firstChild);
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "mg-wa-cta-btn";
+      button.style.backgroundColor = cfg.primaryColor ?? DEFAULT_COLOR;
+      button.innerHTML = `${whatsappIconSvg(16)}<span>${escapeHtml(cfg.ctaLabel ?? DEFAULT_CTA)}</span>`;
+      if (consentBox) {
+        // Initially disabled; the CTA opacity/cursor is handled in CSS via
+        // `:disabled`. Toggle on every checkbox change so the button
+        // unlocks the moment consent is given.
+        button.disabled = true;
+        consentBox.addEventListener("change", () => {
+          button.disabled = !consentBox!.checked;
+        });
+      }
+      button.addEventListener("click", () => {
+        if (isConsentBlocked()) return;
+        const url = buildWaMeUrl(
+          cfg.phoneNumber!,
+          cfg.prefilledMessage ?? "",
+        );
+        window.open(url, "_blank", "noopener,noreferrer");
       });
+      cta.appendChild(button);
     }
-    button.addEventListener("click", () => {
-      if (consentBox && !consentBox.checked) return;
-      const url = buildWaMeUrl(
-        cfg.phoneNumber!,
-        cfg.prefilledMessage ?? "",
-      );
-      window.open(url, "_blank", "noopener,noreferrer");
-    });
-    cta.appendChild(button);
 
     popup.appendChild(cta);
     return popup;
@@ -498,5 +545,33 @@ function wgStyles(_color: string): string {
       text-decoration: none;
     }
     .mg-wa-gdpr-link:hover { text-decoration: underline; }
+
+    .mg-wa-quick-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .mg-wa-quick-chip {
+      width: 100%;
+      background: #fff;
+      border: 1px solid #25D366;
+      color: #25D366;
+      padding: 8px 12px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 500;
+      text-align: left;
+      cursor: pointer;
+      line-height: 1.3;
+      transition: background 0.12s ease;
+    }
+    .mg-wa-quick-chip:hover {
+      background: rgba(37, 211, 102, 0.08);
+    }
+    .mg-wa-quick-chip:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      background: #fff;
+    }
   `;
 }
