@@ -179,6 +179,9 @@ export class WhatsappButton {
     name.textContent = cfg.agentName ?? DEFAULT_AGENT_NAME;
     const role = document.createElement("div");
     role.className = "mg-wa-agent-role";
+    // Plain subtitle — no leading status dot. The dot looked like an
+    // unintentional bullet point on most renders, especially against
+    // the bold WhatsApp green header.
     role.textContent = cfg.agentRole ?? DEFAULT_AGENT_ROLE;
     headerText.appendChild(name);
     headerText.appendChild(role);
@@ -265,7 +268,6 @@ export class WhatsappButton {
         const chip = document.createElement("button");
         chip.type = "button";
         chip.className = "mg-wa-quick-chip";
-        chip.style.borderLeftColor = chipColor;
 
         const text = document.createElement("div");
         text.className = "mg-wa-quick-text";
@@ -282,11 +284,14 @@ export class WhatsappButton {
           text.appendChild(desc);
         }
 
+        // Solid filled arrow circle on the right — reads as the
+        // "send" affordance, mirrors the colour of the FAB so visitors
+        // see the chip and the FAB share a visual language.
         const arrow = document.createElement("span");
         arrow.className = "mg-wa-quick-arrow";
-        arrow.style.color = chipColor;
+        arrow.style.backgroundColor = chipColor;
         arrow.setAttribute("aria-hidden", "true");
-        arrow.textContent = "→";
+        arrow.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>`;
 
         chip.appendChild(text);
         chip.appendChild(arrow);
@@ -577,8 +582,7 @@ function wgStyles(_color: string): string {
       width: 100%;
       background: #fff;
       border: 1px solid #e5e7eb;
-      border-left: 4px solid #25D366;
-      color: #1f2937;
+      color: #111827;
       padding: 10px 12px;
       border-radius: 12px;
       text-align: left;
@@ -586,17 +590,20 @@ function wgStyles(_color: string): string {
       line-height: 1.3;
       display: flex;
       align-items: center;
-      gap: 8px;
-      transition: background 0.12s ease, transform 0.12s ease;
+      gap: 12px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      transition: border-color 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;
     }
     .mg-wa-quick-chip:hover {
-      background: #f9fafb;
-      transform: translateX(1px);
+      border-color: #d1d5db;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+      transform: translateY(-1px);
     }
     .mg-wa-quick-chip:disabled {
       opacity: 0.5;
       cursor: not-allowed;
       background: #fff;
+      box-shadow: none;
       transform: none;
     }
     .mg-wa-quick-text { flex: 1; min-width: 0; }
@@ -610,7 +617,7 @@ function wgStyles(_color: string): string {
     }
     .mg-wa-quick-desc {
       font-size: 11px;
-      color: #6b7280;
+      color: #4b5563;
       margin-top: 2px;
       line-height: 1.35;
       display: -webkit-box;
@@ -620,8 +627,13 @@ function wgStyles(_color: string): string {
     }
     .mg-wa-quick-arrow {
       flex-shrink: 0;
-      font-size: 14px;
-      font-weight: 600;
+      width: 28px;
+      height: 28px;
+      border-radius: 9999px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       transition: transform 0.12s ease;
     }
     .mg-wa-quick-chip:hover .mg-wa-quick-arrow {
