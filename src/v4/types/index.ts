@@ -215,6 +215,61 @@ export interface FloatingButtonConfig {
   domId?: string;
 }
 
+/**
+ * Configuration for the embeddable WhatsApp click-to-chat widget.
+ *
+ * Two ways to feed it:
+ *   1. Inline — pass `phoneNumber`, `greetingMessage`, `prefilledMessage`,
+ *      etc. directly. No network call. Fastest path-to-render. Use this
+ *      when the host page has the values at build time.
+ *   2. Hosted — pass `companyId` and let the loader fetch the latest
+ *      config from `${origin}/integrations/whatsapp/public/widget/:id` on
+ *      mount. Lets the meetergo dashboard control the widget without the
+ *      customer touching their HTML again.
+ *
+ * Both can be combined: inline values win, anything missing is filled
+ * from the hosted config.
+ */
+export interface WhatsappButtonConfig {
+  /**
+   * meetergo company id used to fetch the hosted config. Optional — when
+   * omitted, the widget renders purely from the inline fields below.
+   */
+  companyId?: string;
+  /** Phone number in E.164 (with or without leading +). */
+  phoneNumber?: string;
+  /** Pre-filled WhatsApp draft when the visitor clicks through. */
+  prefilledMessage?: string;
+  /** Greeting bubble shown inside the popup. */
+  greetingMessage?: string;
+  /** Display name in the popup header. */
+  agentName?: string;
+  /** Subtitle / role under the agent name. */
+  agentRole?: string;
+  /** Avatar URL — falls back to initials when omitted. */
+  agentAvatarUrl?: string;
+  /** Corner the FAB pins to. Defaults to bottom-right. */
+  position?: "bottom-right" | "bottom-left" | "top-right" | "top-left";
+  /** Primary brand colour (hex). Defaults to WhatsApp green #25D366. */
+  primaryColor?: string;
+  /** CTA label inside the popup. Defaults to "Start chat". */
+  ctaLabel?: string;
+  /** Hide the widget for the first N milliseconds after mount. */
+  showAfterMs?: number;
+  /** When true, the script renders nothing. */
+  disabled?: boolean;
+  /**
+   * GDPR / privacy consent text. When set, a checkbox is shown above
+   * the CTA and the CTA stays disabled until the visitor ticks it.
+   * Blank / undefined → no checkbox.
+   */
+  gdprNotice?: string;
+  /** Optional URL the consent label links to (privacy policy / imprint). */
+  gdprPolicyUrl?: string;
+  /** Stable DOM id for the FAB element. */
+  domId?: string;
+}
+
 export interface SidebarConfig {
   link: string;
   position?: SidebarPosition;
@@ -283,6 +338,9 @@ export interface NamespaceConfig {
 
   /** Floating button configuration */
   floatingButton?: FloatingButtonConfig;
+
+  /** WhatsApp click-to-chat widget configuration */
+  whatsappButton?: WhatsappButtonConfig;
 
   /** Sidebar configuration */
   sidebar?: SidebarConfig;
