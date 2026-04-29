@@ -252,11 +252,11 @@ export class WhatsappButton {
       cfg.inputMode === "quick-replies" && (cfg.quickReplies?.length ?? 0) > 0;
 
     if (usingQuickReplies) {
-      // Quick-replies mode: render one chip per option. Each chip is a
-      // self-contained "tap to send" — no draft text shown above
-      // because the chip's label IS the choice. The order in `quickReplies`
-      // is preserved so customers can ladder the options by intent
-      // (e.g. most-common first).
+      // Quick-replies mode: render one card-style chip per option. Each
+      // chip carries a bold title (the label) and a small description
+      // line (the message preview), with a `→` indicator on the right —
+      // pattern lifted straight from how Intercom / Tidio render their
+      // saved-reply suggestions, which read instantly on a phone screen.
       const list = document.createElement("div");
       list.className = "mg-wa-quick-list";
       const chipColor = cfg.primaryColor ?? DEFAULT_COLOR;
@@ -265,9 +265,31 @@ export class WhatsappButton {
         const chip = document.createElement("button");
         chip.type = "button";
         chip.className = "mg-wa-quick-chip";
-        chip.style.borderColor = chipColor;
-        chip.style.color = chipColor;
-        chip.textContent = reply.label;
+        chip.style.borderLeftColor = chipColor;
+
+        const text = document.createElement("div");
+        text.className = "mg-wa-quick-text";
+
+        const title = document.createElement("div");
+        title.className = "mg-wa-quick-title";
+        title.textContent = reply.label;
+        text.appendChild(title);
+
+        if (reply.message) {
+          const desc = document.createElement("div");
+          desc.className = "mg-wa-quick-desc";
+          desc.textContent = reply.message;
+          text.appendChild(desc);
+        }
+
+        const arrow = document.createElement("span");
+        arrow.className = "mg-wa-quick-arrow";
+        arrow.style.color = chipColor;
+        arrow.setAttribute("aria-hidden", "true");
+        arrow.textContent = "→";
+
+        chip.appendChild(text);
+        chip.appendChild(arrow);
         chip.addEventListener("click", () => {
           if (isConsentBlocked()) return;
           const url = buildWaMeUrl(cfg.phoneNumber!, reply.message ?? "");
@@ -549,29 +571,61 @@ function wgStyles(_color: string): string {
     .mg-wa-quick-list {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 8px;
     }
     .mg-wa-quick-chip {
       width: 100%;
       background: #fff;
-      border: 1px solid #25D366;
-      color: #25D366;
-      padding: 8px 12px;
-      border-radius: 9999px;
-      font-size: 13px;
-      font-weight: 500;
+      border: 1px solid #e5e7eb;
+      border-left: 4px solid #25D366;
+      color: #1f2937;
+      padding: 10px 12px;
+      border-radius: 12px;
       text-align: left;
       cursor: pointer;
       line-height: 1.3;
-      transition: background 0.12s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.12s ease, transform 0.12s ease;
     }
     .mg-wa-quick-chip:hover {
-      background: rgba(37, 211, 102, 0.08);
+      background: #f9fafb;
+      transform: translateX(1px);
     }
     .mg-wa-quick-chip:disabled {
       opacity: 0.5;
       cursor: not-allowed;
       background: #fff;
+      transform: none;
+    }
+    .mg-wa-quick-text { flex: 1; min-width: 0; }
+    .mg-wa-quick-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #111827;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .mg-wa-quick-desc {
+      font-size: 11px;
+      color: #6b7280;
+      margin-top: 2px;
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .mg-wa-quick-arrow {
+      flex-shrink: 0;
+      font-size: 14px;
+      font-weight: 600;
+      transition: transform 0.12s ease;
+    }
+    .mg-wa-quick-chip:hover .mg-wa-quick-arrow {
+      transform: translateX(2px);
     }
   `;
 }
