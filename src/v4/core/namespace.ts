@@ -28,6 +28,7 @@ import { VideoEmbedManager } from "../modules/video-embed-manager.js";
 import { FloatingButton } from "../modules/floating-button.js";
 import { FormListenerManager } from "../modules/form-listener.js";
 import { InlineEmbedManager } from "../modules/inline-embed.js";
+import { WhatsappButton } from "../modules/whatsapp-button.js";
 import { cssInjector, injectAllBaseStyles } from "../utils/css-injector.js";
 import { domCache } from "../utils/dom-cache.js";
 import { errorHandler } from "../utils/error-handler.js";
@@ -57,6 +58,7 @@ export class MeetergoNamespace {
   private floatingBtn: FloatingButton;
   private formListener: FormListenerManager;
   private inlineEmbed: InlineEmbedManager;
+  private whatsappBtn: WhatsappButton;
 
   private destroyed = false;
 
@@ -80,6 +82,11 @@ export class MeetergoNamespace {
       this.modal.openWithLink(link, prefill)
     );
     this.inlineEmbed = new InlineEmbedManager(id, this.bus, this.config);
+    // The WhatsApp widget hits the meetergo public API to hydrate hosted
+    // configs. Use the namespace `origin` if set so customers running on a
+    // staging deployment talk to the same backend their dashboard talks
+    // to. Trailing slash is fine — the module strips it.
+    this.whatsappBtn = new WhatsappButton(id, this.config.origin);
 
     this.initialize();
   }
@@ -109,6 +116,20 @@ export class MeetergoNamespace {
     // Floating button
     if (this.config.floatingButton) {
       this.floatingBtn.create(this.config.floatingButton);
+    }
+
+    // WhatsApp click-to-chat widget. Async to allow the optional hosted
+    // config fetch to complete before render — failures inside the
+    // module fall back to whatever inline values were passed.
+    if (this.config.whatsappButton) {
+      this.whatsappBtn.create(this.config.whatsappButton).catch((err) =>
+        errorHandler.handleError({
+          message: "WhatsApp widget bootstrap failed",
+          level: "error",
+          ns: this.id,
+          error: err as Error,
+        }),
+      );
     }
 
     // Sidebar
@@ -228,6 +249,7 @@ export class MeetergoNamespace {
     this.floatingBtn.destroy();
     this.formListener.destroy();
     this.inlineEmbed.destroy();
+    this.whatsappBtn.destroy();
     this.prerender?.destroy();
 
     cssInjector.removeCSS(`mg-theme-${this.id}`);
